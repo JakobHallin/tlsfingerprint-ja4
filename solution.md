@@ -123,8 +123,11 @@ red-green-refactor cycle before preparing the commit.
    verifies ordered field extraction, every truncated prefix, malformed
    JA4-specific vectors, and successful parsing of the retained real fixture.
 
-6. **Calculate the human-readable JA4 `a` section**
-   Add tests for TLS version, SNI, counts, ALPN, and GREASE behavior.
+6. **Calculate the human-readable JA4 `a` section — completed**
+   Added the ten-character TLS-over-TCP `a` section with effective TLS-version
+   selection, SNI marker, GREASE-aware cipher and extension counts capped at 99,
+   and specification-compliant ASCII or hexadecimal ALPN markers. Tests cover
+   version mappings, count and ALPN edge cases, and the retained real fixture.
 
 7. **Calculate the JA4 `b` and `c` sections**
    Add sorting, SHA-256 truncation, and known-result tests. At this point the
@@ -167,8 +170,8 @@ red-green-refactor cycle before preparing the commit.
 - After each step, run the relevant checks and review the diff.
 - Develop new behavior test-first unless the step only changes documentation or
   project structure.
-- Do not create a Git commit automatically; leave the changes ready so they can
-  be reviewed and committed manually.
+- After the relevant checks pass, Codex stages all files belonging to the
+  completed numbered step and creates its Git commit automatically.
 - Prefer a sequence of small working changes over a large rewrite.
 - Keep builds and tests local. CI/CD configuration is not required for this
   project.
