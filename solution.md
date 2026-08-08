@@ -178,10 +178,13 @@ red-green-refactor cycle before preparing the commit.
     response, and validates the complete JA4 format. It skips with a clear
     message only when curl is not installed.
 
-12. **Add a real Firefox test**
-    Launch an installed Firefox in an isolated temporary profile, visit the
-    server, collect the response, and shut the browser down reliably. Skip with
-    a clear message when Firefox is not installed.
+12. **Add a real Firefox test — completed**
+    Added an opt-in `browsertest` that launches real Firefox in a disposable
+    Selenium Docker container, creates an isolated WebDriver session/profile,
+    visits the HTTPS server, and validates the JA4 shown by Firefox's JSON
+    viewer. Cleanup forcibly removes the container. The test skips clearly when
+    Docker is unavailable and supports a custom image through
+    `JA4_FIREFOX_IMAGE`.
 
 13. **Add a real Chrome/Chromium test**
     Launch an installed Chrome or Chromium with an isolated temporary profile

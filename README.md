@@ -18,3 +18,9 @@ curl -k https://localhost:8443/
 ```sh
 go test ./...
 ```
+
+Firefox in Docker:
+
+```sh
+go test -tags=browsertest ./internal/server -run TestFirefoxReturnsJA4
+```
