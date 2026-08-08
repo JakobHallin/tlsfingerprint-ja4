@@ -117,9 +117,11 @@ red-green-refactor cycle before preparing the commit.
    fragmentation, truncated headers and payloads, invalid record and handshake
    types, invalid record versions, and byte-limit enforcement.
 
-5. **Parse the ClientHello fields used by JA4**
-   Extract TLS versions, cipher suites, extensions, SNI presence, ALPN, and
-   signature algorithms. Add fixture-based parser tests.
+5. **Parse the ClientHello fields used by JA4 — completed**
+   Added a bounds-checked parser for TLS versions, cipher suites, extension IDs,
+   SNI presence, ALPN protocols, and signature algorithms. Test-first coverage
+   verifies ordered field extraction, every truncated prefix, malformed
+   JA4-specific vectors, and successful parsing of the retained real fixture.
 
 6. **Calculate the human-readable JA4 `a` section**
    Add tests for TLS version, SNI, counts, ALPN, and GREASE behavior.
