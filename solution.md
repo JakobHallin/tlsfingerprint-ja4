@@ -136,9 +136,11 @@ red-green-refactor cycle before preparing the commit.
    ordering rules, signature-order sensitivity, and input immutability. The
    package now calculates a complete JA4 without a server.
 
-8. **Capture ClientHello without consuming the connection**
-   Add a connection wrapper that records/replays the inspected bytes so Go's TLS
-   server can still complete the same handshake. Add a network-level test.
+8. **Capture ClientHello without consuming the connection — completed**
+   Added a tee-and-replay connection wrapper that returns the inspected
+   ClientHello while preserving every consumed byte for Go's TLS server. Tests
+   verify byte-for-byte replay of the retained record fixture and completion of
+   a real in-memory TLS client/server handshake on the inspected connection.
 
 9. **Serve HTTPS**
    Load a certificate, perform TLS, and return a basic HTTP response. Add clean
