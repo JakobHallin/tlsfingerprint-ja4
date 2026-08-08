@@ -142,9 +142,13 @@ red-green-refactor cycle before preparing the commit.
    verify byte-for-byte replay of the retained record fixture and completion of
    a real in-memory TLS client/server handshake on the inspected connection.
 
-9. **Serve HTTPS**
-   Load a certificate, perform TLS, and return a basic HTTP response. Add clean
-   timeouts, size limits, shutdown, and error handling.
+9. **Serve HTTPS — completed**
+   Added a configurable HTTPS server that loads certificate files, inspects and
+   completes TLS connections, and returns a basic HTTP response. It requires
+   finite ClientHello, handshake, header-read, write, and idle limits; drops bad
+   or slow handshakes without stopping the listener; and supports graceful
+   shutdown. The command exposes local flags and handles interrupt/termination
+   signals. Network-level tests cover HTTPS, timeout recovery, and shutdown.
 
 10. **Return JA4 as JSON**
     Connect the captured ClientHello to the fingerprint package and expose the
