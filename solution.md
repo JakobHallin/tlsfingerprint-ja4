@@ -104,8 +104,11 @@ red-green-refactor cycle before preparing the commit.
    generated captures, and development certificates. Verified the minimal
    project with local Go test, vet, and build commands. No JA4 behavior was added.
 
-3. **Define the ClientHello data model**
-   Add types for the fields needed by JA4, without parsing or networking.
+3. **Define the ClientHello data model — completed**
+   Added an internal `ClientHello` type containing the ordered TLS versions,
+   cipher suites, extension IDs, SNI presence, ALPN protocols, and signature
+   algorithms needed by JA4. The model preserves wire values and contains no
+   parsing, networking, GREASE filtering, sorting, or fingerprint calculation.
 
 4. **Parse the TLS record and handshake headers**
    Read a bounded ClientHello, including one split across multiple TLS records.
