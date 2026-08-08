@@ -96,10 +96,12 @@ red-green-refactor cycle before preparing the commit.
 1. **Document the requirements**
    Keep this file as the agreed scope and build order.
 
-2. **Establish the prototype baseline**
-   Run and document the existing prototype, preserve useful captures as test
-   fixtures, and identify which behavior will move into packages. Avoid changing
-   its behavior in this commit.
+2. **Clean the prototype and create a minimal baseline**
+   Review the existing prototype only as reference, then remove the experimental
+   server code and generated capture output that should not be part of the new
+   implementation. Keep only deliberately selected ClientHello data that will
+   be useful as test fixtures. Finish with the smallest valid Go program and
+   verify that it builds. This cleanup is one commit and adds no JA4 behavior.
 
 3. **Define the ClientHello data model**
    Add types for the fields needed by JA4, without parsing or networking.
@@ -166,7 +168,7 @@ red-green-refactor cycle before preparing the commit.
 
 The repository currently contains a single-file prototype that captures a
 ClientHello, calculates a fingerprint, writes capture files, and then closes the
-connection. It is useful as a reference and source of fixtures, but it does not
-yet meet the requirement to complete TLS and serve an HTTPS response. We will
-replace or reorganize it incrementally according to the build plan rather than
-treating it as the finished design.
+connection. It is useful only as a reference and possible source of fixtures;
+it is not the starting architecture for the new server. In step 2 we will clean
+away the experimental implementation and generated output, deliberately retain
+only useful test data, and begin again from a minimal buildable Go program.
