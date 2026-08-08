@@ -21,6 +21,23 @@ import (
 const defaultFirefoxImage = "selenium/standalone-firefox:latest"
 
 func TestFirefoxReturnsJA4(t *testing.T) {
+	testBrowserReturnsJA4(t, browserTestConfig{
+		name:            "Firefox",
+		webdriverName:   "firefox",
+		defaultImage:    defaultFirefoxImage,
+		imageEnvVarName: "JA4_FIREFOX_IMAGE",
+	})
+}
+
+type browserTestConfig struct {
+	name            string
+	webdriverName   string
+	defaultImage    string
+	imageEnvVarName string
+}
+
+func testBrowserReturnsJA4(t *testing.T, config browserTestConfig) {
+	t.Helper()
 	dockerPath, err := exec.LookPath("docker")
 	if err != nil {
 		t.Skip("Docker is not installed")
@@ -38,10 +55,10 @@ func TestFirefoxReturnsJA4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("split WebDriver address %q: %v", driverAddress, err)
 	}
-	containerName := fmt.Sprintf("ja4-firefox-%d", time.Now().UnixNano())
-	image := os.Getenv("JA4_FIREFOX_IMAGE")
+	containerName := fmt.Sprintf("ja4-%s-%d", config.webdriverName, time.Now().UnixNano())
+	image := os.Getenv(config.imageEnvVarName)
 	if image == "" {
-		image = defaultFirefoxImage
+		image = config.defaultImage
 	}
 
 	var containerLog synchronizedBuffer
@@ -85,16 +102,16 @@ func TestFirefoxReturnsJA4(t *testing.T) {
 	createBody := map[string]any{
 		"capabilities": map[string]any{
 			"alwaysMatch": map[string]any{
-				"browserName":         "firefox",
+				"browserName":         config.webdriverName,
 				"acceptInsecureCerts": true,
 			},
 		},
 	}
 	if err := webdriverRequest(webdriverClient, http.MethodPost, driverURL+"/session", createBody, &created); err != nil {
-		t.Fatalf("create Firefox session: %v\ncontainer log:\n%s", err, containerLog.String())
+		t.Fatalf("create %s session: %v\ncontainer log:\n%s", config.name, err, containerLog.String())
 	}
 	if created.Value.SessionID == "" {
-		t.Fatalf("create Firefox session returned no session ID\ncontainer log:\n%s", containerLog.String())
+		t.Fatalf("create %s session returned no session ID\ncontainer log:\n%s", config.name, containerLog.String())
 	}
 	sessionURL := driverURL + "/session/" + created.Value.SessionID
 	t.Cleanup(func() {
@@ -107,7 +124,7 @@ func TestFirefoxReturnsJA4(t *testing.T) {
 	}
 	targetURL := "https://host.docker.internal:" + serverPort + "/"
 	if err := webdriverRequest(webdriverClient, http.MethodPost, sessionURL+"/url", map[string]string{"url": targetURL}, nil); err != nil {
-		t.Fatalf("navigate Firefox to server: %v\ncontainer log:\n%s", err, containerLog.String())
+		t.Fatalf("navigate %s to server: %v\ncontainer log:\n%s", config.name, err, containerLog.String())
 	}
 	var executed struct {
 		Value string `json:"value"`
@@ -119,17 +136,16 @@ func TestFirefoxReturnsJA4(t *testing.T) {
 		map[string]any{"script": "return document.body.innerText;", "args": []any{}},
 		&executed,
 	); err != nil {
-		t.Fatalf("read Firefox page: %v\ncontainer log:\n%s", err, containerLog.String())
+		t.Fatalf("read %s page: %v\ncontainer log:\n%s", config.name, err, containerLog.String())
 	}
 
 	validJA4 := regexp.MustCompile(`^t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}$`)
 	fingerprintPattern := regexp.MustCompile(`t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}`)
 	fingerprint := fingerprintPattern.FindString(executed.Value)
 	if !validJA4.MatchString(fingerprint) {
-		t.Fatalf("Firefox page %q does not contain a valid TLS JA4 fingerprint", executed.Value)
+		t.Fatalf("%s page %q does not contain a valid TLS JA4 fingerprint", config.name, executed.Value)
 	}
 
-	shutdownServer()
 }
 
 func startBrowserTestServer(t *testing.T) (*Server, net.Listener) {
@@ -195,7 +211,7 @@ func waitForWebDriver(t *testing.T, client *http.Client, baseURL string, log *sy
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	t.Fatalf("Firefox container did not become ready\n%s", log.String())
+	t.Fatalf("browser container did not become ready\n%s", log.String())
 }
 
 func webdriverRequest(client *http.Client, method string, url string, requestBody any, responseBody any) error {

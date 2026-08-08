@@ -186,9 +186,12 @@ red-green-refactor cycle before preparing the commit.
     Docker is unavailable and supports a custom image through
     `JA4_FIREFOX_IMAGE`.
 
-13. **Add a real Chrome/Chromium test**
-    Launch an installed Chrome or Chromium with an isolated temporary profile
-    and apply the same checks and cleanup rules as Firefox.
+13. **Add a real Chrome/Chromium test — completed**
+    Refactored the Docker browser test into a shared harness and added real
+    Chrome using a disposable Selenium container and isolated WebDriver
+    session/profile. The test visits the HTTPS server, validates the returned
+    JA4, force-cleans the container, skips clearly when Docker is unavailable,
+    and supports a custom image through `JA4_CHROME_IMAGE`.
 
 14. **Add local documentation**
     Document how to create local certificates, start the server, run the fast
