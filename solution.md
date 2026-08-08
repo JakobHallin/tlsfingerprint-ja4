@@ -165,9 +165,12 @@ red-green-refactor cycle before preparing the commit.
    command's default certificate paths and refuses to overwrite an existing
    private key. Network-level tests cover HTTPS, timeout recovery, and shutdown.
 
-10. **Return JA4 as JSON**
-    Connect the captured ClientHello to the fingerprint package and expose the
-    result from an endpoint. Add an end-to-end Go client test.
+10. **Return JA4 as JSON — completed**
+    Connected each accepted TLS connection's captured ClientHello to the parser
+    and fingerprint package, carried the result through the HTTP connection
+    context, and returned it from the endpoint as `{"ja4":"..."}`. An
+    end-to-end Go TLS client test verifies HTTPS, JSON content type, response
+    decoding, and the complete JA4 format.
 
 11. **Add a real curl test**
     Start the built server, invoke the installed curl binary, and verify a

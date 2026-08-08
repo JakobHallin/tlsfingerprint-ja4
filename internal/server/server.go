@@ -4,12 +4,16 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"catchhello/internal/capture"
+	"catchhello/internal/clienthello"
+	"catchhello/internal/ja4"
 )
 
 // Config contains the HTTPS server's local settings.
@@ -30,6 +34,7 @@ type Server struct {
 	tlsConfig  *tls.Config
 	httpServer *http.Server
 	config     Config
+	pending    sync.Map
 }
 
 // New loads the configured certificate and constructs a server.
@@ -61,11 +66,7 @@ func New(config Config) (*Server, error) {
 		return nil, fmt.Errorf("load TLS certificate: %w", err)
 	}
 
-	handler := http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
-		response.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = response.Write([]byte("ok\n"))
-	})
-	return &Server{
+	server := &Server{
 		address: config.Address,
 		config:  config,
 		tlsConfig: &tls.Config{
@@ -73,13 +74,15 @@ func New(config Config) (*Server, error) {
 			MinVersion:   tls.VersionTLS12,
 			NextProtos:   []string{"http/1.1"},
 		},
-		httpServer: &http.Server{
-			Handler:           handler,
-			ReadHeaderTimeout: config.ReadHeaderTimeout,
-			WriteTimeout:      config.WriteTimeout,
-			IdleTimeout:       config.IdleTimeout,
-		},
-	}, nil
+	}
+	server.httpServer = &http.Server{
+		Handler:           http.HandlerFunc(server.handleRequest),
+		ConnContext:       server.connectionContext,
+		ReadHeaderTimeout: config.ReadHeaderTimeout,
+		WriteTimeout:      config.WriteTimeout,
+		IdleTimeout:       config.IdleTimeout,
+	}
+	return server, nil
 }
 
 // ListenAndServe listens on the configured address and serves HTTPS.
@@ -98,9 +101,44 @@ func (server *Server) Serve(listener net.Listener) error {
 		tlsConfig:          server.tlsConfig,
 		maxClientHelloSize: server.config.MaxClientHelloBytes,
 		handshakeTimeout:   server.config.HandshakeTimeout,
+		register:           server.registerClientHello,
 	}
 	return server.httpServer.Serve(inspected)
 }
+
+func (server *Server) registerClientHello(connection net.Conn, handshake []byte) error {
+	hello, err := clienthello.Parse(handshake)
+	if err != nil {
+		return fmt.Errorf("parse ClientHello: %w", err)
+	}
+	server.pending.Store(connection, ja4.Fingerprint(hello))
+	return nil
+}
+
+func (server *Server) connectionContext(ctx context.Context, connection net.Conn) context.Context {
+	fingerprint, ok := server.pending.LoadAndDelete(connection)
+	if !ok {
+		return ctx
+	}
+	return context.WithValue(ctx, fingerprintContextKey{}, fingerprint)
+}
+
+func (server *Server) handleRequest(response http.ResponseWriter, request *http.Request) {
+	fingerprint, ok := request.Context().Value(fingerprintContextKey{}).(string)
+	if !ok {
+		http.Error(response, "JA4 fingerprint unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	response.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(response).Encode(struct {
+		JA4 string `json:"ja4"`
+	}{JA4: fingerprint}); err != nil {
+		return
+	}
+}
+
+type fingerprintContextKey struct{}
 
 // Shutdown gracefully stops the server.
 func (server *Server) Shutdown(ctx context.Context) error {
@@ -112,6 +150,7 @@ type tlsListener struct {
 	tlsConfig          *tls.Config
 	maxClientHelloSize int
 	handshakeTimeout   time.Duration
+	register           func(net.Conn, []byte) error
 }
 
 func (listener *tlsListener) Accept() (net.Conn, error) {
@@ -126,7 +165,7 @@ func (listener *tlsListener) Accept() (net.Conn, error) {
 			_ = connection.Close()
 			continue
 		}
-		replayed, _, err := capture.ClientHello(connection, listener.maxClientHelloSize)
+		replayed, handshake, err := capture.ClientHello(connection, listener.maxClientHelloSize)
 		if err != nil {
 			_ = connection.Close()
 			continue
@@ -140,6 +179,12 @@ func (listener *tlsListener) Accept() (net.Conn, error) {
 		if err := tlsConnection.SetDeadline(time.Time{}); err != nil {
 			_ = tlsConnection.Close()
 			continue
+		}
+		if listener.register != nil {
+			if err := listener.register(tlsConnection, handshake); err != nil {
+				_ = tlsConnection.Close()
+				continue
+			}
 		}
 		return tlsConnection, nil
 	}

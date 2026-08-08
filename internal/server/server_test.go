@@ -8,14 +8,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -56,16 +57,22 @@ func TestServerServesHTTPSAndShutsDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HTTPS GET: %v", err)
 	}
-	body, err := io.ReadAll(response.Body)
-	_ = response.Body.Close()
-	if err != nil {
-		t.Fatalf("read response: %v", err)
-	}
 	if response.StatusCode != http.StatusOK {
 		t.Errorf("status = %d, want %d", response.StatusCode, http.StatusOK)
 	}
-	if got, want := string(body), "ok\n"; got != want {
-		t.Errorf("body = %q, want %q", got, want)
+	if got, want := response.Header.Get("Content-Type"), "application/json"; got != want {
+		t.Errorf("Content-Type = %q, want %q", got, want)
+	}
+	var body struct {
+		JA4 string `json:"ja4"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		_ = response.Body.Close()
+		t.Fatalf("decode response: %v", err)
+	}
+	_ = response.Body.Close()
+	if validJA4 := regexp.MustCompile(`^t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}$`); !validJA4.MatchString(body.JA4) {
+		t.Errorf("ja4 = %q, want a valid TLS JA4 fingerprint", body.JA4)
 	}
 
 	shutdownContext, cancel := context.WithTimeout(context.Background(), 2*time.Second)
