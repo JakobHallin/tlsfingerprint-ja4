@@ -1,0 +1,9 @@
+# Go build and test output
+/catchhello
+/bin/
+*.test
+coverage.out
+
+# Locally generated runtime data
+/captures/
+/certs/

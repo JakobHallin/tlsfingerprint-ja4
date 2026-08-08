@@ -96,12 +96,13 @@ red-green-refactor cycle before preparing the commit.
 1. **Document the requirements**
    Keep this file as the agreed scope and build order.
 
-2. **Clean the prototype and create a minimal baseline**
-   Review the existing prototype only as reference, then remove the experimental
-   server code and generated capture output that should not be part of the new
-   implementation. Keep only deliberately selected ClientHello data that will
-   be useful as test fixtures. Finish with the smallest valid Go program and
-   verify that it builds. This cleanup is one commit and adds no JA4 behavior.
+2. **Clean the prototype and create a minimal baseline — completed**
+   Replaced the experimental server with the smallest valid Go program. Removed
+   generated captures and unused empty scaffolding directories. Retained one
+   ClientHello and TLS-record pair in `testdata`, together with its recorded JA4
+   value and provenance notes. Added `.gitignore` rules for local Go output,
+   generated captures, and development certificates. Verified the minimal
+   project with local Go test, vet, and build commands. No JA4 behavior was added.
 
 3. **Define the ClientHello data model**
    Add types for the fields needed by JA4, without parsing or networking.
@@ -166,9 +167,9 @@ red-green-refactor cycle before preparing the commit.
 
 ## Existing prototype
 
-The repository currently contains a single-file prototype that captures a
-ClientHello, calculates a fingerprint, writes capture files, and then closes the
-connection. It is useful only as a reference and possible source of fixtures;
-it is not the starting architecture for the new server. In step 2 we will clean
-away the experimental implementation and generated output, deliberately retain
-only useful test data, and begin again from a minimal buildable Go program.
+The repository originally contained a single-file prototype that captured a
+ClientHello, calculated a fingerprint, wrote capture files, and then closed the
+connection. During step 2, that experimental implementation and its generated
+output were removed. One capture was deliberately retained in `testdata` as a
+future test fixture, and the project now starts from a minimal buildable Go
+program.
