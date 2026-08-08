@@ -110,9 +110,12 @@ red-green-refactor cycle before preparing the commit.
    algorithms needed by JA4. The model preserves wire values and contains no
    parsing, networking, GREASE filtering, sorting, or fingerprint calculation.
 
-4. **Parse the TLS record and handshake headers**
-   Read a bounded ClientHello, including one split across multiple TLS records.
-   Add focused tests for complete, partial, malformed, and oversized input.
+4. **Parse the TLS record and handshake headers — completed**
+   Added a bounded TLS-record reader that returns one complete ClientHello,
+   including its handshake header, when input spans one or multiple records.
+   Test-first coverage uses the retained real fixture and constructed inputs for
+   fragmentation, truncated headers and payloads, invalid record and handshake
+   types, invalid record versions, and byte-limit enforcement.
 
 5. **Parse the ClientHello fields used by JA4**
    Extract TLS versions, cipher suites, extensions, SNI presence, ALPN, and
