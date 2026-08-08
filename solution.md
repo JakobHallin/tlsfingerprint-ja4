@@ -129,9 +129,12 @@ red-green-refactor cycle before preparing the commit.
    and specification-compliant ASCII or hexadecimal ALPN markers. Tests cover
    version mappings, count and ALPN edge cases, and the retained real fixture.
 
-7. **Calculate the JA4 `b` and `c` sections**
-   Add sorting, SHA-256 truncation, and known-result tests. At this point the
-   fingerprint package should calculate a complete JA4 without a server.
+7. **Calculate the JA4 `b` and `c` sections — completed**
+   Added sorted lowercase hexadecimal inputs, GREASE filtering, SHA-256
+   truncation, specification-defined empty hashes, and complete fingerprint
+   assembly. Tests verify the official JA4 example, the retained real fixture,
+   ordering rules, signature-order sensitivity, and input immutability. The
+   package now calculates a complete JA4 without a server.
 
 8. **Capture ClientHello without consuming the connection**
    Add a connection wrapper that records/replays the inspected bytes so Go's TLS
