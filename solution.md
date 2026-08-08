@@ -38,6 +38,19 @@ Example response (the value is illustrative):
 }
 ```
 
+## Run the HTTPS server locally
+
+Generate a self-signed development certificate and start the server using its
+default paths:
+
+```sh
+./scripts/generate-cert.sh
+go run .
+```
+
+The generated certificate is for local development and is not trusted by
+clients automatically.
+
 ## Testing requirements
 
 Testing will have two layers:
@@ -148,7 +161,9 @@ red-green-refactor cycle before preparing the commit.
    finite ClientHello, handshake, header-read, write, and idle limits; drops bad
    or slow handshakes without stopping the listener; and supports graceful
    shutdown. The command exposes local flags and handles interrupt/termination
-   signals. Network-level tests cover HTTPS, timeout recovery, and shutdown.
+   signals. A local OpenSSL script creates a self-signed certificate at the
+   command's default certificate paths and refuses to overwrite an existing
+   private key. Network-level tests cover HTTPS, timeout recovery, and shutdown.
 
 10. **Return JA4 as JSON**
     Connect the captured ClientHello to the fingerprint package and expose the
