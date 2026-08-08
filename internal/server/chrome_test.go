@@ -12,5 +12,6 @@ func TestChromeReturnsJA4(t *testing.T) {
 		webdriverName:   "chrome",
 		defaultImage:    defaultChromeImage,
 		imageEnvVarName: "JA4_CHROME_IMAGE",
+		userAgentMarker: "Chrome/",
 	})
 }

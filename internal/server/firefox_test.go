@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ func TestFirefoxReturnsJA4(t *testing.T) {
 		webdriverName:   "firefox",
 		defaultImage:    defaultFirefoxImage,
 		imageEnvVarName: "JA4_FIREFOX_IMAGE",
+		userAgentMarker: "Firefox/",
 	})
 }
 
@@ -34,6 +36,7 @@ type browserTestConfig struct {
 	webdriverName   string
 	defaultImage    string
 	imageEnvVarName string
+	userAgentMarker string
 }
 
 func testBrowserReturnsJA4(t *testing.T, config browserTestConfig) {
@@ -96,7 +99,11 @@ func testBrowserReturnsJA4(t *testing.T, config browserTestConfig) {
 
 	var created struct {
 		Value struct {
-			SessionID string `json:"sessionId"`
+			SessionID    string `json:"sessionId"`
+			Capabilities struct {
+				BrowserName    string `json:"browserName"`
+				BrowserVersion string `json:"browserVersion"`
+			} `json:"capabilities"`
 		} `json:"value"`
 	}
 	createBody := map[string]any{
@@ -113,6 +120,9 @@ func testBrowserReturnsJA4(t *testing.T, config browserTestConfig) {
 	if created.Value.SessionID == "" {
 		t.Fatalf("create %s session returned no session ID\ncontainer log:\n%s", config.name, containerLog.String())
 	}
+	if !strings.EqualFold(created.Value.Capabilities.BrowserName, config.webdriverName) {
+		t.Fatalf("requested %s but WebDriver started browser %q", config.name, created.Value.Capabilities.BrowserName)
+	}
 	sessionURL := driverURL + "/session/" + created.Value.SessionID
 	t.Cleanup(func() {
 		_ = webdriverRequest(webdriverClient, http.MethodDelete, sessionURL, nil, nil)
@@ -127,25 +137,40 @@ func testBrowserReturnsJA4(t *testing.T, config browserTestConfig) {
 		t.Fatalf("navigate %s to server: %v\ncontainer log:\n%s", config.name, err, containerLog.String())
 	}
 	var executed struct {
-		Value string `json:"value"`
+		Value struct {
+			Body      string `json:"body"`
+			UserAgent string `json:"userAgent"`
+		} `json:"value"`
 	}
 	if err := webdriverRequest(
 		webdriverClient,
 		http.MethodPost,
 		sessionURL+"/execute/sync",
-		map[string]any{"script": "return document.body.innerText;", "args": []any{}},
+		map[string]any{
+			"script": "return {body: document.body.innerText, userAgent: navigator.userAgent};",
+			"args":   []any{},
+		},
 		&executed,
 	); err != nil {
 		t.Fatalf("read %s page: %v\ncontainer log:\n%s", config.name, err, containerLog.String())
 	}
 
-	validJA4 := regexp.MustCompile(`^t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}$`)
-	fingerprintPattern := regexp.MustCompile(`t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}`)
-	fingerprint := fingerprintPattern.FindString(executed.Value)
-	if !validJA4.MatchString(fingerprint) {
-		t.Fatalf("%s page %q does not contain a valid TLS JA4 fingerprint", config.name, executed.Value)
+	if !strings.Contains(executed.Value.UserAgent, config.userAgentMarker) {
+		t.Fatalf("%s reported unexpected user agent %q", config.name, executed.Value.UserAgent)
 	}
-
+	if !strings.Contains(executed.Value.Body, "ja4") {
+		t.Fatalf("%s page does not contain the JA4 response field: %q", config.name, executed.Value.Body)
+	}
+	fingerprintPattern := regexp.MustCompile(`t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}`)
+	fingerprints := fingerprintPattern.FindAllString(executed.Value.Body, -1)
+	if len(fingerprints) != 1 {
+		t.Fatalf("%s page should contain exactly one TLS JA4 fingerprint, got %d in %q", config.name, len(fingerprints), executed.Value.Body)
+	}
+	validJA4 := regexp.MustCompile(`^t[0-9a-z]{2}[di][0-9]{4}[0-9A-Za-z]{2}_[0-9a-f]{12}_[0-9a-f]{12}$`)
+	if !validJA4.MatchString(fingerprints[0]) {
+		t.Fatalf("%s server response contains invalid TLS JA4 fingerprint %q", config.name, fingerprints[0])
+	}
+	t.Logf("verified real %s %s (%s), JA4 %s", config.name, created.Value.Capabilities.BrowserVersion, executed.Value.UserAgent, fingerprints[0])
 }
 
 func startBrowserTestServer(t *testing.T) (*Server, net.Listener) {
