@@ -172,9 +172,11 @@ red-green-refactor cycle before preparing the commit.
     end-to-end Go TLS client test verifies HTTPS, JSON content type, response
     decoding, and the complete JA4 format.
 
-11. **Add a real curl test**
-    Start the built server, invoke the installed curl binary, and verify a
-    successful response containing a valid JA4.
+11. **Add a real curl test — completed**
+    Added an end-to-end test that starts the actual HTTPS server on an ephemeral
+    loopback port, invokes the installed curl executable, decodes its JSON
+    response, and validates the complete JA4 format. It skips with a clear
+    message only when curl is not installed.
 
 12. **Add a real Firefox test**
     Launch an installed Firefox in an isolated temporary profile, visit the
